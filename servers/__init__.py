@@ -37,10 +37,12 @@ from .memory_server import memory_server
 from .template_server import template_server
 from .config_server import config_server
 from .guide_server import guide_server
+from .document_server import document_server
 
 __all__ = [
     "memory_server",
     "template_server", 
     "config_server",
-    "guide_server"
+    "guide_server",
+    "document_server"
 ] 

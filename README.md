@@ -44,6 +44,8 @@ Synapse is the bridge that connects artificial and human intelligence, creating 
 - [📖 Documentation & Guides](#-documentation--guides)
   - [📚 Tools Reference](docs/tools-reference.md) - Complete guide to all Synapse tools
   - [🚀 Setup After Clone Guide](docs/setup-after-clone-guide.md) - Get started in 10 minutes
+  - [🪟 Windows Setup Guide](docs/windows-setup-guide.md) - Windows-specific setup with automation
+  - [🍎🐧 Mac/Linux Setup Guide](docs/mac-linux-setup-guide.md) - Unix platform setup guide
   - [⚙️ MCP Configuration Guide](docs/mcp-json-configuration-guide.md) - AI assistant setup
   - [🏗️ Architecture Guide](docs/ARCHITECTURE.md) - Technical architecture details
   - [📋 Guidelines](docs/guidelines.md) - Development and usage guidelines
@@ -69,16 +71,17 @@ Synapse isn't about AI replacing humans—it's about AI amplifying human potenti
 ```
 Synapse MCP Platform
 ├── Memory Tools        - Core memory operations (CRUD)
+├── Document Tools      - Document processing & management
+├── Template Tools      - Smart template generation & analysis
 ├── Config Tools        - Database & system configuration
-├── Advanced Tools      - Project analysis & file operations
-└── Meta Tools          - System information & introspection
+└── Guide Tools         - Documentation & help resources
 ```
 
 ### 🔧 Technical Foundation
 
 - **MCP (Model Context Protocol)** - Seamless AI assistant integration
 - **Hard-Coded Tools** - Reliable, predictable tool registration
-- **Multi-Database Support** - SQLite (default) + MariaDB (production)
+- **Multi-Database Support** - DuckDB (default) + MariaDB + SQLite (legacy)
 - **Configuration Management** - Environment-based settings
 - **Cross-Platform** - Windows, macOS, Linux
 
@@ -168,6 +171,12 @@ python main.py --help
 - **Store & Retrieve** - Persistent memory across AI sessions
 - **Search & Discovery** - Find information instantly
 - **Auto-Sync** - Database + file system synchronization
+
+### 📄 Document Management
+- **Multi-Format Support** - PDF, Office, LibreOffice, plain text
+- **Text Extraction** - Searchable content from documents
+- **Tag Organization** - Categorize and find documents easily
+- **Full-Text Search** - Find content across all documents
 
 ### 📝 Template Generation
 - **Smart Templates** - Context-aware document generation
@@ -271,16 +280,20 @@ config_get_database_info()
 
 ### Multi-Database Support
 ```bash
-# SQLite for development (default)
-export SYNAPSE_DB_TYPE=sqlite
-export SYNAPSE_SQLITE_DB_PATH=synapse.db
+# DuckDB for high-performance analytics (default)
+export SYNAPSE_DB_TYPE=duckdb
+export SYNAPSE_DUCKDB_DB_PATH=synapse.duckdb
 
-# MariaDB for production
+# MariaDB for production with embedded server
 export SYNAPSE_DB_TYPE=mariadb
 export SYNAPSE_MARIADB_HOST=localhost
 export SYNAPSE_MARIADB_USER=synapse_user
 export SYNAPSE_MARIADB_PASSWORD=password
 export SYNAPSE_MARIADB_DATABASE=synapse
+
+# SQLite for legacy compatibility
+export SYNAPSE_DB_TYPE=sqlite
+export SYNAPSE_SQLITE_DB_PATH=synapse.db
 ```
 
 ### Hard-Coded Tool Architecture
@@ -355,13 +368,51 @@ We welcome contributions from developers, researchers, and users who share our v
 
 ---
 
+## 🙏 Special Thanks
+
+<table>
+<tr>
+<td width="50%">
+
+### 🐍 **Python** 
+The powerful, elegant language that makes Synapse possible. Python's simplicity and rich ecosystem enable rapid development and robust AI integration.
+
+**Website:** [python.org](https://python.org)
+
+### 🦆 **DuckDB** 
+The blazing-fast analytical database that powers Synapse's default storage. DuckDB delivers exceptional performance for our memory and document operations.
+
+**Website:** [duckdb.org](https://duckdb.org)  
+**GitHub:** [duckdb/duckdb](https://github.com/duckdb/duckdb)
+
+</td>
+<td width="50%">
+
+### 🗄️ **MariaDB**
+The reliable, production-ready database that scales with your needs. MariaDB provides enterprise-grade data management for Synapse deployments.
+
+**Website:** [mariadb.org](https://mariadb.org)  
+**GitHub:** [MariaDB/server](https://github.com/MariaDB/server)
+
+### 🔗 **Model Context Protocol (MCP)**
+The revolutionary protocol that enables seamless AI-human collaboration. MCP makes it possible for AI assistants to work naturally with Synapse.
+
+**Website:** [modelcontextprotocol.io](https://modelcontextprotocol.io)  
+**GitHub:** [modelcontextprotocol/specification](https://github.com/modelcontextprotocol/specification)
+
+</td>
+</tr>
+</table>
+
+---
+
 ## 📄 License
 
 This project is licensed under the GNU General Public License v3.0 (GPLv3).
 
 You are free to use, modify, and distribute this software under the terms of the GPLv3. See the LICENSE file in the project root for the full license text and your rights and obligations.
 
-*Note: This project was previously licensed under the MIT License. As of [date], it is now licensed under GPL v3.0 for stronger copyleft and future flexibility.*
+*Note: This project was previously licensed under the MIT License. As of 2025/01, it is now licensed under GPL v3.0 for stronger copyleft and future flexibility.*
 
 ---
 

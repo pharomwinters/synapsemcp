@@ -16,11 +16,18 @@ GUIDE = """## Setting Up Synapse
    - `SYNAPSE_AUTO_DISCOVER` - Enable auto-discovery on startup
 
 ### 3. Database Setup
-The system supports SQLite (default) and MariaDB:
+The system supports DuckDB (default) and MariaDB:
 
-**SQLite (Recommended for development):**
+**DuckDB (Recommended for most use cases):**
 - No additional setup required
 - Database file created automatically
+- High-performance analytical database
+- Optimized for OLAP workloads
+
+**SQLite (Legacy compatibility):**
+- No additional setup required
+- Database file created automatically
+- Simple file-based database
 
 **MariaDB (For production):**
 - Install MariaDB server

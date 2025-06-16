@@ -30,7 +30,10 @@ from typing import Dict, Any, Optional
 # Default configuration structure
 DEFAULT_CONFIG = {
     "database": {
-        "type": "sqlite",
+        "type": "duckdb",
+        "duckdb": {
+            "db_path": "synapse.duckdb"
+        },
         "sqlite": {
             "db_path": "synapse.db"
         },
@@ -119,6 +122,10 @@ class Config:
         if "SYNAPSE_DB_TYPE" in os.environ:
             self._config["database"]["type"] = os.environ["SYNAPSE_DB_TYPE"]
         
+        # DuckDB configuration
+        if "SYNAPSE_DUCKDB_DB_PATH" in os.environ:
+            self._config["database"]["duckdb"]["db_path"] = os.environ["SYNAPSE_DUCKDB_DB_PATH"]
+        
         # SQLite configuration
         if "SYNAPSE_SQLITE_DB_PATH" in os.environ:
             self._config["database"]["sqlite"]["db_path"] = os.environ["SYNAPSE_SQLITE_DB_PATH"]
@@ -173,7 +180,7 @@ class Config:
     
     def get_database_config(self) -> Dict[str, Any]:
         """Get database configuration for the current database type."""
-        db_type = self.get("database.type", "sqlite")
+        db_type = self.get("database.type", "duckdb")
         db_config = self.get(f"database.{db_type}", {})
         return {"type": db_type, **db_config}
     

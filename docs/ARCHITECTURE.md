@@ -2,19 +2,21 @@
 
 ## Overview
 
-The Synapse project has been refactored to use **Server Composition** architecture with **Auto-Discovery** capabilities for scalable tool management.
+The Synapse project uses a **Hard-Coded Tool Architecture** with **Server Composition** for reliable and predictable tool management.
 
 ### Key Benefits
-- **Modularity**: Each server handles a specific domain (memory, templates, config, guides)
-- **Scalability**: New servers can be added without modifying existing code
+- **Reliability**: Hard-coded tools ensure consistent behavior across environments
+- **Modularity**: Each server handles a specific domain (memory, documents, templates, config, guides)
+- **Performance**: No runtime discovery overhead, immediate tool availability
 - **Maintainability**: Individual servers can be developed, tested, and updated independently
-- **Auto-Discovery**: Tools can be dynamically loaded from plugins and extensions
+- **Predictability**: All tools are registered at startup with known capabilities
 
 ## Architecture Diagram
 
 ```
 Synapse MCP Platform (Main)
 ├── Memory Synapse      - Core memory operations (CRUD)
+├── Document Synapse    - Document processing & management
 ├── Template Synapse    - Template generation & analysis
 ├── Config Synapse      - Configuration & system management
 └── Guide Synapse       - Documentation & help resources
@@ -27,12 +29,15 @@ synapse/
 ├── mcp_instance.py            # Main composed server
 ├── servers/                   # Individual specialized servers
 │   ├── memory_server.py      # Memory operations
+│   ├── document_server.py    # Document processing & management
 │   ├── template_server.py    # Template generation
 │   ├── config_server.py      # Configuration management
 │   └── guide_server.py       # Documentation & guides
-├── tools/                    # Auto-discoverable tools
-├── plugins/                  # Plugin-style tools
-└── utils.py                  # Auto-discovery utilities
+├── startup_scripts/          # Cross-platform startup automation
+├── docs/                     # Comprehensive documentation
+├── duckdb_db.py             # DuckDB database implementation
+├── mariadb_server_manager.py # Embedded MariaDB management
+└── utils.py                  # Database and utility functions
 ```
 
 ## Server Responsibilities
@@ -48,9 +53,29 @@ synapse/
 - `search_memories(query)` - Search memory content
 
 **Key Features**:
-- Database integration (SQLite/MariaDB)
+- Database integration (DuckDB/MariaDB/SQLite)
 - File system fallback
 - Automatic synchronization between database and filesystem
+
+### Document Synapse (`document_server.py`)
+**Purpose**: Document processing and management operations
+
+**Tools Provided**:
+- `store_document(file_path, document_name, tags)` - Store and process documents
+- `get_document(document_name)` - Retrieve document information
+- `list_documents(tag_filter)` - List all documents with optional filtering
+- `search_documents(query, search_content)` - Search document names and content
+- `delete_document(document_name, delete_file)` - Delete documents
+- `get_supported_formats()` - Get supported file format information
+- `add_document_tags(document_name, tags)` - Add tags to documents
+
+**Key Features**:
+- Multi-format document support (PDF, Office, LibreOffice, plain text)
+- Text extraction for searchability
+- Tag-based organization
+- Full-text search capabilities
+- Metadata management
+- File hash verification
 
 ### Template Synapse (`template_server.py`)
 **Purpose**: Template generation and project analysis
@@ -103,47 +128,43 @@ synapse/
 - Troubleshooting guides
 - Quick start resources
 
-## Auto-Discovery System
+## Database Configuration
 
-### Overview
-The auto-discovery system allows new tools to be automatically detected and registered without modifying the main server code.
+### Multi-Database Support
+Synapse supports three database backends with automatic selection:
 
-### Discovery Patterns
-- `tools/*.py` - General purpose tools
-- `plugins/*_plugin.py` - Plugin-style tools
+- **DuckDB** - High-performance analytical database (default)
+- **MariaDB** - Production-ready relational database with embedded server
+- **SQLite** - Lightweight database for backward compatibility
 
-### Tool Registration
-Tools are registered using the `@mcp_tool` decorator:
+### Environment Variables
+Configuration can be controlled via environment variables:
 
-```python
-from utils import mcp_tool
+- `SYNAPSE_ENV` - Environment (development/test/production)
+- `SYNAPSE_DB_TYPE` - Database type (duckdb/mariadb/sqlite/auto)
+- `SYNAPSE_DUCKDB_DB_PATH` - DuckDB database path
+- `SYNAPSE_SQLITE_DB_PATH` - SQLite database path (legacy)
+- `SYNAPSE_MARIADB_HOST` - MariaDB host
+- `SYNAPSE_MARIADB_PORT` - MariaDB port
+- `SYNAPSE_MARIADB_USER` - MariaDB user
+- `SYNAPSE_MARIADB_PASSWORD` - MariaDB password
+- `SYNAPSE_MARIADB_DATABASE` - MariaDB database name
 
-@mcp_tool
-def my_custom_tool(data: str) -> str:
-    """My custom analysis tool."""
-    return f"Processed: {data}"
-```
-
-### Auto-Discovery Configuration
-```bash
-# Enable auto-discovery on startup
-export SYNAPSE_AUTO_DISCOVER=true
-python main.py
-```
-
-### Manual Discovery
-```python
-# Trigger discovery manually
-result = await discover_tools(verbose=True)
-```
+### Configuration Files
+Environment-specific JSON configuration files:
+- `config.dev.json` - Development (DuckDB default)
+- `config.dev.mariadb.json` - Development with MariaDB
+- `config.test.json` - Testing environment
+- `config.prod.json` - Production environment
 
 ## Tool Naming Convention
 
 Tools are prefixed by their server when mounted:
 - **memory_*** - Memory operations (memory_read_memory, memory_write_memory)
-- **templates_*** - Template operations (templates_generate_synapse_template)
+- **document_*** - Document operations (document_store_document, document_search_documents)
+- **template_*** - Template operations (template_generate_synapse_template)
 - **config_*** - Configuration operations (config_get_configuration)
-- **guides_*** - Documentation operations (guides_get_guide)
+- **guide_*** - Documentation operations (guide_get_guide)
 
 ## Composition Benefits
 
@@ -207,8 +228,9 @@ python servers/guide_server.py
 ### Environment Variables
 - `SYNAPSE_ENV` - Environment (development/testing/production)
 - `SYNAPSE_AUTO_DISCOVER` - Enable auto-discovery on startup
-- `SYNAPSE_DB_TYPE` - Database type (sqlite/mariadb)
-- `SYNAPSE_SQLITE_DB_PATH` - SQLite database path
+- `SYNAPSE_DB_TYPE` - Database type (duckdb/mariadb/sqlite)
+- `SYNAPSE_DUCKDB_DB_PATH` - DuckDB database path (default)
+- `SYNAPSE_SQLITE_DB_PATH` - SQLite database path (legacy)
 - `SYNAPSE_MARIADB_*` - MariaDB connection settings
 
 ### Configuration Files
@@ -216,5 +238,7 @@ python servers/guide_server.py
 - `config.test.json` - Testing settings
 - `config.prod.json` - Production settings
 - `config.local.json` - Local overrides (not in version control)
+
+**Note:** As of the latest version, Synapse has upgraded from SQLite to DuckDB as the default database for improved performance and analytical capabilities. SQLite remains supported for legacy compatibility.
 
 This architecture provides a robust foundation for the Synapse system while maintaining flexibility for future growth. 

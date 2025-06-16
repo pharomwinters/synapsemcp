@@ -1,10 +1,11 @@
 {
     "database": {
-        "type": "sqlite",
-        "sqlite": {
-            "db_path": "synapse_dev.db"
+        "type": "duckdb",
+        "duckdb": {
+            "db_path": "synapse_dev.duckdb"
         }
     },
     "memory_dir": "memories_dev",
+    "documents_dir": "documents_dev",
     "log_level": "DEBUG"
 }

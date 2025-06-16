@@ -2,6 +2,10 @@
 
 > **🎯 Just cloned the Synapse repository? This guide will get you running in 10 minutes!**
 
+📚 **Platform-Specific Guides:**
+- 🪟 **Windows Users:** See the [Windows Setup Guide](windows-setup-guide.md) for automated setup scripts
+- 🍎🐧 **Mac/Linux Users:** See the [Mac/Linux Setup Guide](mac-linux-setup-guide.md) for Unix-specific instructions
+
 ## ⚡ Quick Setup (TL;DR)
 
 ```bash
@@ -57,6 +61,7 @@ pip install -r requirements.txt
 This installs:
 - FastMCP (for AI assistant connections)
 - MariaDB connector (database support)
+- DuckDB (high-performance analytical database)
 - psutil (system monitoring)
 
 ### Step 3: Configuration (Optional)
@@ -338,10 +343,10 @@ python -c "import mariadb; print('MariaDB connector installed')"
 
 ### 5. **Where does Synapse store my data?**
 
-- **SQLite database:** `synapse.db` (created automatically)
-- **Memory files:** `memories/` folder (if using file system)
-- **Configuration:** `config.*.json` files
-- **Logs:** Console output (you can redirect to file if needed)
+**Files created automatically:**
+- **Memory directory:** `memories` (for storing AI memory files)
+- **DuckDB database:** `synapse.duckdb` (created automatically)
+- **Configuration:** Uses `config.prod.json` by default
 
 ### 6. **How do I know if Synapse is working with my AI assistant?**
 
@@ -433,3 +438,11 @@ If you've completed the checklist above:
 - Check system status: *"Show me Synapse configuration"*
 
 **Welcome to the Synapse community!** 🚀 
+
+**Synapse (This Project):**
+- Memory management ✅
+- Template generation ✅
+- Project analysis ✅
+- Database management ✅
+- DuckDB database (high-performance)
+- AI assistant integration ✅ 

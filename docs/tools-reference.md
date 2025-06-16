@@ -4,13 +4,11 @@
 
 ## 🧠 Overview
 
-Synapse provides a comprehensive set of tools for memory management, database configuration, project analysis, and workflow automation. All tools are hard-coded for maximum reliability and predictability.
+Synapse provides a comprehensive set of tools for memory management, document processing, database configuration, project analysis, and workflow automation. All tools are hard-coded for maximum reliability and predictability.
 
 ---
 
 ## 📋 Core Memory Tools
-
-These tools handle the fundamental memory operations in Synapse.
 
 ### `memory_get_memory_list`
 **Description:** Get a list of all memory files in the Synapse system.
@@ -99,6 +97,118 @@ Ask your AI assistant: "Search my memories for 'API design'" or "Find memories c
 
 ---
 
+## 📄 Document Management Tools
+
+These tools handle document storage, text extraction, and management operations for various file formats.
+
+### `document_store_document`
+**Description:** Store and process a document in the Synapse system with text extraction and metadata management.
+
+**Parameters:**
+- `file_path` (required): Path to the document file to store
+- `document_name` (optional): Custom name for the document (defaults to filename)
+- `tags` (optional): List of tags to associate with the document
+
+**Usage:**
+```
+Ask your AI assistant: "Store this document: /path/to/file.pdf" or "Add document report.docx with tags ['project', 'quarterly']"
+```
+
+**Returns:** Document storage confirmation with metadata
+**Supported Formats:** PDF, DOCX, XLSX, ODT, TXT, MD, RTF, CSV, HTML
+
+---
+
+### `document_get_document`
+**Description:** Retrieve document information and metadata.
+
+**Parameters:**
+- `document_name` (required): Name of the document to retrieve
+
+**Usage:**
+```
+Ask your AI assistant: "Get document info for report.pdf" or "Show me details of my_document"
+```
+
+**Returns:** Complete document metadata including extracted text, file info, and tags
+
+---
+
+### `document_list_documents`
+**Description:** List all documents in the system with optional tag filtering.
+
+**Parameters:**
+- `tag_filter` (optional): Filter documents by specific tag
+
+**Usage:**
+```
+Ask your AI assistant: "List all documents" or "Show documents tagged with 'project'"
+```
+
+**Returns:** List of documents with basic metadata
+
+---
+
+### `document_search_documents`
+**Description:** Search through document names and content.
+
+**Parameters:**
+- `query` (required): Search term to look for
+- `search_content` (optional): Whether to search document content (default: true)
+
+**Usage:**
+```
+Ask your AI assistant: "Search documents for 'budget analysis'" or "Find documents about 'API design'"
+```
+
+**Returns:** List of matching documents with relevance information
+
+---
+
+### `document_delete_document`
+**Description:** Delete a document from the system.
+
+**Parameters:**
+- `document_name` (required): Name of the document to delete
+- `delete_file` (optional): Whether to delete the original file (default: false)
+
+**Usage:**
+```
+Ask your AI assistant: "Delete document old_report.pdf" or "Remove document draft.docx and delete file"
+```
+
+**Returns:** Deletion confirmation
+
+---
+
+### `document_get_supported_formats`
+**Description:** Get information about supported document formats and processing capabilities.
+
+**Usage:**
+```
+Ask your AI assistant: "What document formats are supported?" or "Show document processing capabilities"
+```
+
+**Returns:** List of supported file formats with descriptions and processing status
+
+---
+
+### `document_add_document_tags`
+**Description:** Add additional tags to an existing document.
+
+**Parameters:**
+- `document_name` (required): Name of the document
+- `tags` (required): List of tags to add
+
+**Usage:**
+```
+Ask your AI assistant: "Add tags ['important', 'review'] to report.pdf"
+```
+
+**Returns:** Updated tag information
+
+---
+
 ## ⚙️ Database Configuration Tools
 
 These tools allow you to configure and manage the database backend for Synapse.
@@ -107,21 +217,21 @@ These tools allow you to configure and manage the database backend for Synapse.
 **Description:** Configure the database type for Synapse memory storage.
 
 **Parameters:**
-- `db_type` (required): Type of database ('sqlite', 'mariadb')
-- `db_path` (optional): Database path for SQLite or connection details
+- `db_type` (required): Type of database ('duckdb', 'sqlite', 'mariadb')
+- `db_path` (optional): Database path for DuckDB/SQLite or connection details
 
 **Usage:**
 ```
-Ask your AI assistant: "Set database to SQLite with path custom.db" or "Configure MariaDB database"
+Ask your AI assistant: "Set database to DuckDB with path custom.duckdb" or "Configure MariaDB database"
 ```
 
 **Returns:** Status message confirming the database configuration
-**Example:** "✅ Database type set to 'sqlite' with path: custom_synapse.db"
+**Example:** "✅ Database type set to 'duckdb' with path: custom_synapse.duckdb"
 
-**Notes:** 
-- Changes take effect after restart
-- For MariaDB, individual environment variables must be set
-- SQLite is the default and recommended for development
+**Notes:**
+- DuckDB is the default and recommended for most use cases
+- SQLite is available for legacy compatibility
+- MariaDB requires additional environment variables for connection details
 
 ---
 
@@ -143,11 +253,18 @@ Ask your AI assistant: "Show database configuration" or "What database am I usin
 **Example Output:**
 ```
 🗄️ Database Configuration
-Environment: development
-Type: sqlite
-Memory Directory: memories
-Current Database Settings:
-• SQLite Path: synapse.db
+        
+**Environment**: development
+**Type**: duckdb
+**Memory Directory**: memories_dev
+
+**Current Database Settings**:
+• DuckDB Path: synapse_dev.duckdb
+
+**Supported Types**:
+• duckdb - DuckDB database (default)
+• sqlite - Local SQLite database (legacy)
+• mariadb - MariaDB/MySQL database
 ```
 
 ---
@@ -439,9 +556,9 @@ def my_custom_tool(input_text: str) -> str:
 
 ### Database Configuration Issues
 - Use `config_get_database_info` to check current settings
-- Verify environment variables are set correctly
-- Check database file permissions (SQLite)
-- Ensure MariaDB connection details are correct
+- Ensure database file permissions are correct (DuckDB/SQLite)
+- Check database file permissions (DuckDB/SQLite)
+- Verify MariaDB server is running and accessible (if using MariaDB)
 
 ### Permission Errors
 - Check file permissions

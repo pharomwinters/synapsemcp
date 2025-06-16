@@ -15,11 +15,13 @@
 # along with Synapse.  If not, see <https://www.gnu.org/licenses/>.
 #
 """
-SQLite database implementation for Synapse.
-This module provides SQLite-specific functionality for storing and retrieving synapse data.
+DuckDB database implementation for Synapse.
+This module provides DuckDB-specific functionality for storing and retrieving synapse data.
+DuckDB is an in-process SQL OLAP database management system with excellent performance
+and compatibility with standard SQL.
 """
 import os
-import sqlite3
+import duckdb
 from typing import List, Optional, Dict, Any
 from pathlib import Path
 from datetime import datetime
@@ -27,19 +29,18 @@ from datetime import datetime
 from base import SynapseDatabase, MemoryRecord, DatabaseConnectionError, MemoryNotFoundError
 
 
-class SQLiteDatabase(SynapseDatabase):
-    """SQLite implementation of Synapse database operations."""
+class DuckDBDatabase(SynapseDatabase):
+    """DuckDB implementation of Synapse database operations."""
 
-    def __init__(self, db_path: str = "synapse.db"):
+    def __init__(self, db_path: str = "synapse.duckdb"):
         """
-        Initialize SQLite database connection.
+        Initialize DuckDB database connection.
 
         Args:
-            db_path: Path to the SQLite database file
+            db_path: Path to the DuckDB database file
         """
         self.db_path = db_path
         self.conn = None
-        self.cursor = None
 
     def initialize_database(self) -> None:
         """Initialize the database schema."""
@@ -54,26 +55,23 @@ class SQLiteDatabase(SynapseDatabase):
             self.create_tables()
             
         except Exception as e:
-            raise DatabaseConnectionError(f"Failed to initialize SQLite database: {e}")
+            raise DatabaseConnectionError(f"Failed to initialize DuckDB database: {e}")
 
     def connect(self) -> None:
-        """Connect to the SQLite database."""
+        """Connect to the DuckDB database."""
         try:
             # Close existing connection if any
             if self.conn:
                 self.conn.close()
                 
-            self.conn = sqlite3.connect(self.db_path)
-            self.conn.row_factory = sqlite3.Row  # Enable column access by name
-            self.cursor = self.conn.cursor()
+            self.conn = duckdb.connect(self.db_path)
             
             # Verify connection
-            self.cursor.execute("SELECT 1")
+            self.conn.execute("SELECT 1").fetchone()
             
             assert self.conn is not None
-            assert self.cursor is not None
-        except sqlite3.Error as e:
-            raise DatabaseConnectionError(f"Error connecting to SQLite database: {e}")
+        except Exception as e:
+            raise DatabaseConnectionError(f"Error connecting to DuckDB database: {e}")
 
     def disconnect(self) -> None:
         """Disconnect from the database."""
@@ -82,29 +80,25 @@ class SQLiteDatabase(SynapseDatabase):
     def close(self) -> None:
         """Close database connection."""
         try:
-            if self.cursor:
-                self.cursor.close()
-                self.cursor = None
             if self.conn:
                 self.conn.close()
                 self.conn = None
-        except sqlite3.Error as e:
+        except Exception as e:
             # Log warning but don't raise exception on close
-            print(f"Warning: Error closing SQLite connection: {e}")
+            print(f"Warning: Error closing DuckDB connection: {e}")
 
     def create_tables(self) -> None:
         """Create necessary tables if they don't exist."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
             
         try:
             # Create memories table
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE TABLE IF NOT EXISTS memories (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                filename TEXT UNIQUE NOT NULL,
+                id BIGINT PRIMARY KEY,
+                filename VARCHAR UNIQUE NOT NULL,
                 content TEXT NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -114,10 +108,10 @@ class SQLiteDatabase(SynapseDatabase):
             ''')
             
             # Create memory history table
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE TABLE IF NOT EXISTS memory_history (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                filename TEXT NOT NULL,
+                id BIGINT PRIMARY KEY,
+                filename VARCHAR NOT NULL,
                 content TEXT NOT NULL,
                 version INTEGER NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -125,20 +119,24 @@ class SQLiteDatabase(SynapseDatabase):
             )
             ''')
             
+            # Create sequences for auto-increment
+            self.conn.execute('CREATE SEQUENCE IF NOT EXISTS memories_id_seq START 1')
+            self.conn.execute('CREATE SEQUENCE IF NOT EXISTS memory_history_id_seq START 1')
+            
             # Create documents table
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE TABLE IF NOT EXISTS documents (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                document_name TEXT UNIQUE NOT NULL,
-                original_filename TEXT NOT NULL,
-                file_extension TEXT NOT NULL,
-                file_type TEXT NOT NULL,
-                mime_type TEXT,
-                file_size INTEGER NOT NULL,
-                file_hash TEXT UNIQUE NOT NULL,
-                stored_filename TEXT NOT NULL,
-                stored_path TEXT NOT NULL,
-                original_path TEXT NOT NULL,
+                id BIGINT PRIMARY KEY,
+                document_name VARCHAR UNIQUE NOT NULL,
+                original_filename VARCHAR NOT NULL,
+                file_extension VARCHAR NOT NULL,
+                file_type VARCHAR NOT NULL,
+                mime_type VARCHAR,
+                file_size BIGINT NOT NULL,
+                file_hash VARCHAR UNIQUE NOT NULL,
+                stored_filename VARCHAR NOT NULL,
+                stored_path VARCHAR NOT NULL,
+                original_path VARCHAR NOT NULL,
                 extracted_text TEXT,
                 tags TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -148,224 +146,233 @@ class SQLiteDatabase(SynapseDatabase):
             ''')
             
             # Create document_tags table for better tag management
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE TABLE IF NOT EXISTS document_tags (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                document_name TEXT NOT NULL,
-                tag TEXT NOT NULL,
+                id BIGINT PRIMARY KEY,
+                document_name VARCHAR NOT NULL,
+                tag VARCHAR NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(document_name, tag)
             )
             ''')
             
+            # Create sequences for auto-increment
+            self.conn.execute('CREATE SEQUENCE IF NOT EXISTS documents_id_seq START 1')
+            self.conn.execute('CREATE SEQUENCE IF NOT EXISTS document_tags_id_seq START 1')
+            
             # Create indexes for better performance
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE INDEX IF NOT EXISTS idx_memories_filename 
             ON memories(filename)
             ''')
             
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE INDEX IF NOT EXISTS idx_memory_history_filename 
             ON memory_history(filename, version)
             ''')
             
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE INDEX IF NOT EXISTS idx_documents_name 
             ON documents(document_name)
             ''')
             
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE INDEX IF NOT EXISTS idx_documents_hash 
             ON documents(file_hash)
             ''')
             
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE INDEX IF NOT EXISTS idx_documents_extension 
             ON documents(file_extension)
             ''')
             
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE INDEX IF NOT EXISTS idx_document_tags_name 
             ON document_tags(document_name)
             ''')
             
-            self.cursor.execute('''
+            self.conn.execute('''
             CREATE INDEX IF NOT EXISTS idx_document_tags_tag 
             ON document_tags(tag)
             ''')
             
-            self.conn.commit()
+            # Note: DuckDB doesn't support full-text search indexes like PostgreSQL
+            # Text search will use standard LIKE operations
             
-        except sqlite3.Error as e:
-            if self.conn:
-                self.conn.rollback()
+        except Exception as e:
             raise DatabaseConnectionError(f"Error creating tables: {e}")
 
     def save_memory(self, filename: str, content: str, metadata: Optional[Dict[str, Any]] = None) -> bool:
         """Save memory content to database."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
+            # Start transaction explicitly
+            self.conn.begin()
+            
             metadata_json = None
             if metadata:
                 import json
                 metadata_json = json.dumps(metadata)
 
             # Check if memory already exists
-            self.cursor.execute("SELECT id, version FROM memories WHERE filename = ?", (filename,))
-            result = self.cursor.fetchone()
+            result = self.conn.execute("SELECT id, version FROM memories WHERE filename = ?", (filename,)).fetchone()
 
             if result:
                 # Save to history before updating
-                old_version = result['version']
-                self.cursor.execute(
-                    "INSERT INTO memory_history (filename, content, version, metadata) "
-                    "SELECT filename, content, version, metadata FROM memories WHERE filename = ?",
+                old_version = result[1]
+                self.conn.execute(
+                    "INSERT INTO memory_history (id, filename, content, version, metadata) "
+                    "SELECT nextval('memory_history_id_seq'), filename, content, version, metadata FROM memories WHERE filename = ?",
                     (filename,)
                 )
                 
                 # Update existing memory
-                self.cursor.execute(
+                self.conn.execute(
                     "UPDATE memories SET content = ?, updated_at = CURRENT_TIMESTAMP, metadata = ?, version = ? WHERE filename = ?",
                     (content, metadata_json, old_version + 1, filename)
                 )
             else:
                 # Insert new memory
-                self.cursor.execute(
-                    "INSERT INTO memories (filename, content, metadata) VALUES (?, ?, ?)",
+                self.conn.execute(
+                    "INSERT INTO memories (id, filename, content, metadata) VALUES (nextval('memories_id_seq'), ?, ?, ?)",
                     (filename, content, metadata_json)
                 )
                 
             self.conn.commit()
             return True
             
-        except sqlite3.Error as e:
-            if self.conn:
+        except Exception as e:
+            try:
                 self.conn.rollback()
+            except:
+                pass  # Ignore rollback errors
             raise Exception(f"Error saving memory: {e}")
 
     def load_memory(self, filename: str) -> Optional[str]:
         """Load memory content from database."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
-            self.cursor.execute("SELECT content FROM memories WHERE filename = ?", (filename,))
-            result = self.cursor.fetchone()
-            return result['content'] if result else None
-        except sqlite3.Error as e:
+            result = self.conn.execute("SELECT content FROM memories WHERE filename = ?", (filename,)).fetchone()
+            return result[0] if result else None
+        except Exception as e:
             raise Exception(f"Error loading memory: {e}")
 
     def list_memories(self) -> List[str]:
         """List all memory filenames."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
-            self.cursor.execute("SELECT filename FROM memories ORDER BY filename")
-            results = self.cursor.fetchall()
-            return [result['filename'] for result in results]
-        except sqlite3.Error as e:
+            results = self.conn.execute("SELECT filename FROM memories ORDER BY filename").fetchall()
+            return [result[0] for result in results]
+        except Exception as e:
             raise Exception(f"Error listing memories: {e}")
 
     def delete_memory(self, filename: str) -> bool:
         """Delete memory from database."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
+            # Start transaction explicitly
+            self.conn.begin()
+            
             # Also delete history
-            self.cursor.execute("DELETE FROM memory_history WHERE filename = ?", (filename,))
-            self.cursor.execute("DELETE FROM memories WHERE filename = ?", (filename,))
+            self.conn.execute("DELETE FROM memory_history WHERE filename = ?", (filename,))
+            
+            # Delete from memories and check if any rows were affected
+            result_before = self.conn.execute("SELECT COUNT(*) FROM memories WHERE filename = ?", (filename,)).fetchone()
+            count_before = result_before[0] if result_before else 0
+            
+            self.conn.execute("DELETE FROM memories WHERE filename = ?", (filename,))
+            
+            result_after = self.conn.execute("SELECT COUNT(*) FROM memories WHERE filename = ?", (filename,)).fetchone()
+            count_after = result_after[0] if result_after else 0
+            
             self.conn.commit()
-            return self.cursor.rowcount > 0
-        except sqlite3.Error as e:
-            if self.conn:
+            return count_before > count_after
+        except Exception as e:
+            try:
                 self.conn.rollback()
+            except:
+                pass  # Ignore rollback errors
             raise Exception(f"Error deleting memory: {e}")
 
     def get_memory_metadata(self, filename: str) -> Optional[Dict[str, Any]]:
         """Get metadata for a specific memory."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
-            self.cursor.execute("SELECT metadata, created_at, updated_at, version FROM memories WHERE filename = ?", (filename,))
-            result = self.cursor.fetchone()
+            result = self.conn.execute("SELECT metadata, created_at, updated_at, version FROM memories WHERE filename = ?", (filename,)).fetchone()
             
             if result:
                 metadata = {}
-                if result['metadata']:
+                if result[0]:
                     import json
-                    metadata = json.loads(result['metadata'])
+                    metadata = json.loads(result[0])
                 
                 metadata.update({
-                    'created_at': result['created_at'],
-                    'updated_at': result['updated_at'],
-                    'version': result['version']
+                    'created_at': result[1],
+                    'updated_at': result[2],
+                    'version': result[3]
                 })
                 return metadata
             return None
-        except sqlite3.Error as e:
+        except Exception as e:
             raise Exception(f"Error getting metadata: {e}")
 
     def search_memories(self, query: str) -> List[Dict[str, Any]]:
         """Search memories by content."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
-            self.cursor.execute(
+            results = self.conn.execute(
                 "SELECT filename, content FROM memories WHERE content LIKE ? ORDER BY filename",
                 (f"%{query}%",)
-            )
-            results = self.cursor.fetchall()
-            return [{'filename': r['filename'], 'content': r['content']} for r in results]
-        except sqlite3.Error as e:
+            ).fetchall()
+            return [{'filename': r[0], 'content': r[1]} for r in results]
+        except Exception as e:
             raise Exception(f"Error searching memories: {e}")
 
     def get_memory_history(self, filename: str, limit: int = 10) -> List[Dict[str, Any]]:
         """Get revision history for a memory."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
-            self.cursor.execute(
+            results = self.conn.execute(
                 "SELECT version, created_at, metadata FROM memory_history WHERE filename = ? "
                 "ORDER BY version DESC LIMIT ?",
                 (filename, limit)
-            )
-            results = self.cursor.fetchall()
+            ).fetchall()
             
             history = []
             for result in results:
                 metadata = {}
-                if result['metadata']:
+                if result[2]:
                     import json
-                    metadata = json.loads(result['metadata'])
+                    metadata = json.loads(result[2])
                 
                 history.append({
-                    'version': result['version'],
-                    'created_at': result['created_at'],
+                    'version': result[0],
+                    'created_at': result[1],
                     'metadata': metadata
                 })
             return history
-        except sqlite3.Error as e:
+        except Exception as e:
             raise Exception(f"Error getting memory history: {e}")
 
     # Legacy methods for compatibility
@@ -386,21 +393,20 @@ class SQLiteDatabase(SynapseDatabase):
     # Document management methods
     def store_document(self, document_name: str, document_metadata: Dict[str, Any]) -> bool:
         """Store document metadata in database."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
             import json
+            self.conn.begin()
             
             # Check if document already exists
-            self.cursor.execute("SELECT id FROM documents WHERE document_name = ?", (document_name,))
-            result = self.cursor.fetchone()
+            result = self.conn.execute("SELECT id FROM documents WHERE document_name = ?", (document_name,)).fetchone()
             
             if result:
                 # Update existing document
-                self.cursor.execute('''
+                self.conn.execute('''
                 UPDATE documents SET 
                     original_filename = ?, file_extension = ?, file_type = ?, mime_type = ?,
                     file_size = ?, file_hash = ?, stored_filename = ?, stored_path = ?,
@@ -424,12 +430,14 @@ class SQLiteDatabase(SynapseDatabase):
                 ))
             else:
                 # Insert new document
-                self.cursor.execute('''
+                self.conn.execute('''
                 INSERT INTO documents (
-                    document_name, original_filename, file_extension, file_type, mime_type,
+                    id, document_name, original_filename, file_extension, file_type, mime_type,
                     file_size, file_hash, stored_filename, stored_path, original_path,
                     extracted_text, tags, metadata
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ) VALUES (
+                    nextval('documents_id_seq'), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                )
                 ''', (
                     document_name,
                     document_metadata.get('original_filename'),
@@ -447,35 +455,36 @@ class SQLiteDatabase(SynapseDatabase):
                 ))
             
             # Update tags table
-            self.cursor.execute("DELETE FROM document_tags WHERE document_name = ?", (document_name,))
+            self.conn.execute("DELETE FROM document_tags WHERE document_name = ?", (document_name,))
             for tag in document_metadata.get('tags', []):
-                self.cursor.execute('''
-                INSERT INTO document_tags (document_name, tag) VALUES (?, ?)
+                self.conn.execute('''
+                INSERT INTO document_tags (id, document_name, tag) 
+                VALUES (nextval('document_tags_id_seq'), ?, ?)
                 ''', (document_name, tag))
             
             self.conn.commit()
             return True
             
-        except sqlite3.Error as e:
-            if self.conn:
+        except Exception as e:
+            try:
                 self.conn.rollback()
+            except:
+                pass
             raise Exception(f"Error storing document: {e}")
 
     def get_document(self, document_name: str) -> Optional[Dict[str, Any]]:
         """Get document metadata from database."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
-            self.cursor.execute('''
+            result = self.conn.execute('''
             SELECT original_filename, file_extension, file_type, mime_type, file_size,
                    file_hash, stored_filename, stored_path, original_path, extracted_text,
                    tags, created_at, updated_at, metadata
             FROM documents WHERE document_name = ?
-            ''', (document_name,))
-            result = self.cursor.fetchone()
+            ''', (document_name,)).fetchone()
             
             if not result:
                 return None
@@ -502,60 +511,59 @@ class SQLiteDatabase(SynapseDatabase):
                 **metadata
             }
             
-        except sqlite3.Error as e:
+        except Exception as e:
             raise Exception(f"Error getting document: {e}")
 
     def list_documents(self) -> List[str]:
         """List all document names."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
-            self.cursor.execute("SELECT document_name FROM documents ORDER BY document_name")
-            results = self.cursor.fetchall()
+            results = self.conn.execute("SELECT document_name FROM documents ORDER BY document_name").fetchall()
             return [result[0] for result in results]
-        except sqlite3.Error as e:
+        except Exception as e:
             raise Exception(f"Error listing documents: {e}")
 
     def delete_document(self, document_name: str) -> bool:
         """Delete document from database."""
-        if not self.conn or not self.cursor:
-            self.connect()
+        if not self.conn:
+            self.connect() 
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
+            self.conn.begin()
+            
             # Delete tags first
-            self.cursor.execute("DELETE FROM document_tags WHERE document_name = ?", (document_name,))
+            self.conn.execute("DELETE FROM document_tags WHERE document_name = ?", (document_name,))
             
             # Delete document
-            self.cursor.execute("DELETE FROM documents WHERE document_name = ?", (document_name,))
-            rows_affected = self.cursor.rowcount
+            result = self.conn.execute("DELETE FROM documents WHERE document_name = ?", (document_name,))
+            rows_affected = result.rowcount if hasattr(result, 'rowcount') else 0
             
             self.conn.commit()
             return rows_affected > 0
             
-        except sqlite3.Error as e:
-            if self.conn:
+        except Exception as e:
+            try:
                 self.conn.rollback()
+            except:
+                pass
             raise Exception(f"Error deleting document: {e}")
 
     def search_documents_by_content(self, query: str) -> List[str]:
         """Search documents by content."""
-        if not self.conn or not self.cursor:
+        if not self.conn:
             self.connect()
         assert self.conn is not None
-        assert self.cursor is not None
 
         try:
-            self.cursor.execute('''
+            results = self.conn.execute('''
             SELECT document_name FROM documents 
             WHERE extracted_text LIKE ? OR document_name LIKE ?
             ORDER BY document_name
-            ''', (f'%{query}%', f'%{query}%'))
-            results = self.cursor.fetchall()
+            ''', (f'%{query}%', f'%{query}%')).fetchall()
             return [result[0] for result in results]
-        except sqlite3.Error as e:
-            raise Exception(f"Error searching documents: {e}")
+        except Exception as e:
+            raise Exception(f"Error searching documents: {e}") 

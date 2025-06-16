@@ -48,14 +48,12 @@ from typing import Iterator
 from base import SynapseDatabase
 from mariadb import MariaDBDatabase
 from sqlite_db import SQLiteDatabase
-from duckdb_db import DuckDBDatabase
 from config import config, ConfigurationError
 
 MEMORY_FILE_EXTENSION = ".md"
 ENCODING = config.get("encoding", "utf-8")
 SUPPORTED_DB_TYPES = {
     "sqlite": SQLiteDatabase,
-    "duckdb": DuckDBDatabase,
     "mariadb": MariaDBDatabase,
     "mysql": MariaDBDatabase
 }
@@ -255,46 +253,12 @@ def db_connection(db: SynapseDatabase) -> Iterator[SynapseDatabase]:
         db.disconnect()
 
 
-def get_db_config_from_config() -> Dict[str, Any]:
-    """
-    Extract database configuration from the global config.
-    
-    Returns:
-        A dictionary with database configuration parameters
-    """
-    db_type = config.get("database.type", "duckdb")
-    
-    if db_type == "duckdb":
-        db_config = {
-            "db_path": config.get("database.duckdb.db_path", "synapse.duckdb")
-        }
-    elif db_type == "sqlite":
-        db_config = {
-            "db_path": config.get("database.sqlite.db_path", "synapse.db")
-        }
-    elif db_type in ["mariadb", "mysql"]:
-        db_config = {
-            "host": config.get("database.mariadb.host", "localhost"),
-            "port": config.get("database.mariadb.port", 3306),
-            "user": config.get("database.mariadb.user", "root"),
-            "password": config.get("database.mariadb.password", ""),
-            "database": config.get("database.mariadb.database", "synapse")
-        }
-    else:
-        # Fallback to DuckDB
-        db_config = {
-            "db_path": config.get("database.duckdb.db_path", "synapse.duckdb")
-        }
-    
-    return db_config
-
-
 def get_db_instance(db_type: Optional[str] = None, **kwargs) -> SynapseDatabase:
     """
     Get a database instance based on the specified type.
 
     Args:
-        db_type: The database type to use (duckdb, sqlite, mariadb, mysql)
+        db_type: The database type to use (sqlite, mariadb, mysql)
                 If None, uses the type from configuration
         **kwargs: Additional parameters to pass to the database constructor
                   These override any values from configuration
@@ -307,7 +271,7 @@ def get_db_instance(db_type: Optional[str] = None, **kwargs) -> SynapseDatabase:
     """
     # Use configuration if db_type is not specified
     if db_type is None:
-        db_type = config.get("database.type", "duckdb")
+        db_type = config.get("database.type", "sqlite")
     
     # Ensure db_type is a string before calling lower()
     db_type_str = str(db_type)
@@ -320,18 +284,25 @@ def get_db_instance(db_type: Optional[str] = None, **kwargs) -> SynapseDatabase:
     db_config = get_db_config_from_config()
     db_config.update(kwargs)
 
-    # Create database instance
-    db_instance = db_class(**db_config)
+    return db_class(**db_config)
+
+
+def get_db_config_from_config() -> Dict[str, Any]:
+    """
+    Extract database configuration from the global config.
     
-    # IMPORTANT: Initialize the database (create tables if they don't exist)
-    try:
-        db_instance.initialize_database()
-        logger.info(f"Database initialized successfully with type: {db_type_str}")
-    except Exception as e:
-        logger.error(f"Failed to initialize database: {e}")
-        raise SynapseException(f"Database initialization failed: {e}")
-    
-    return db_instance
+    Returns:
+        A dictionary with database configuration parameters
+    """
+    db_config = {
+        "host": config.get("database.host", "localhost"),
+        "port": config.get("database.port", 3306),
+        "user": config.get("database.user", "root"),
+        "password": config.get("database.password", ""),
+        "database": config.get("database.name", "synapse"),
+        "db_path": config.get("database.path", "synapse.db")
+    }
+    return db_config
 
 
 def migrate_files_to_db(memory_dir: Optional[Union[str, Path]] = None, db: Optional[SynapseDatabase] = None) -> Dict[str, bool]:
@@ -422,43 +393,20 @@ def write_memory_to_db_and_file(file_name: str, content: str,
 
     # Create database instance if not provided
     if db is None:
-        try:
-            db = get_db_instance()
-        except Exception as e:
-            logger.error(f"Failed to get database instance: {e}")
-            success = False
+        db = get_db_instance()
 
-    # Write to file system first (as backup)
     try:
         fs.write_file(file_name, content)
-        logger.debug(f"Successfully wrote {file_name} to file system")
     except Exception as e:
-        logger.error(f"Error writing to file: {e}")
+        print(f"Error writing to file: {e}")
         success = False
 
-    # Write to database
-    if db is not None:
-        try:
-            # Ensure we have a connection
-            with db_connection(db) as connected_db:
-                # Save to database
-                db_success = connected_db.save_memory(file_name, content)
-            if not db_success:
-                logger.error(f"Database save returned False for {file_name}")
-                success = False
-            else:
-                logger.debug(f"Successfully wrote {file_name} to database")
-                
-        except Exception as e:
-            logger.error(f"Error writing to database: {e}")
-            success = False
-        finally:
-            # Close connection if we opened it
-            try:
-                if hasattr(db, 'close'):
-                    db.close()
-            except Exception as e:
-                logger.warning(f"Error closing database connection: {e}")
+    try:
+        with db_connection(db) as connected_db:
+            connected_db.store_memory(file_name, content)
+    except Exception as e:
+        print(f"Error writing to database: {e}")
+        success = False
 
     return success
 

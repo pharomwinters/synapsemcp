@@ -46,6 +46,10 @@ coverage.xml
 *.swo
 *~
 .DS_Store
+.claude/
+CLAUDE.md
+CLAUDE.md.bak
+memories/
 
 # Synapse specific
 *.db

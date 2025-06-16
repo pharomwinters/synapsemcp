@@ -43,7 +43,9 @@ The Synapse application uses environment-based configuration. Configuration file
 Environment variables:
 - `SYNAPSE_ENV` - Environment (development/testing/production)
 - `SYNAPSE_AUTO_DISCOVER` - Enable auto-discovery on startup
-- `SYNAPSE_DB_TYPE` - Database type (sqlite/mariadb)
+- `SYNAPSE_DB_TYPE` - Database type (duckdb/sqlite/mariadb)
+- `SYNAPSE_DUCKDB_DB_PATH` - DuckDB database path (default)
+- `SYNAPSE_SQLITE_DB_PATH` - SQLite database path (legacy)
 
 ## Testing
 
@@ -54,7 +56,7 @@ cd tests
 python -m unittest discover
 
 # Run specific test
-python test_sqlite_db.py
+python test_database.py
 
 # Test with coverage (if installed)
 coverage run -m unittest discover
@@ -65,7 +67,7 @@ coverage report
 ```
 tests/
 ├── test_config.py           # Configuration tests
-├── test_sqlite_db.py        # Database tests  
+├── test_database.py         # Database tests
 ├── test_memory_server.py    # Memory server tests
 ├── test_template_server.py  # Template server tests
 ├── test_config_server.py    # Config server tests
@@ -76,14 +78,12 @@ tests/
 ```python
 import unittest
 from pathlib import Path
-import tempfile
-from sqlite_db import SQLiteDatabase
+from duckdb_db import DuckDBDatabase
 
-class TestSQLiteDatabase(unittest.TestCase):
+class TestDuckDBDatabase(unittest.TestCase):
     def setUp(self):
-        self.temp_dir = tempfile.TemporaryDirectory()
-        self.db_path = Path(self.temp_dir.name) / "test_synapse.db"
-        self.db = SQLiteDatabase(str(self.db_path))
+        self.db_path = Path("test_synapse.duckdb")
+        self.db = DuckDBDatabase(str(self.db_path))
         self.db.initialize_database()
 
     def test_save_and_load_memory(self):
@@ -92,7 +92,6 @@ class TestSQLiteDatabase(unittest.TestCase):
 
     def tearDown(self):
         self.db.close()
-        self.temp_dir.cleanup()
 ```
 
 ## Development
@@ -112,7 +111,7 @@ The Synapse project follows a modular architecture:
 - `servers/`: Individual specialized servers (memory, templates, config, guides)
 - `utils.py`: Utility functions and auto-discovery system
 - `base.py`: Abstract base classes
-- `sqlite_db.py`, `mariadb.py`: Database implementations
+- `duckdb_db.py`, `sqlite_db.py`, `mariadb.py`: Database implementations
 
 ### Adding New Features
 
@@ -135,10 +134,16 @@ The Synapse project follows a modular architecture:
 
 ### Database Development
 
-#### SQLite (Default)
-- Used for development and simple deployments
+#### DuckDB (Default)
+- Used for most deployments due to high performance
 - Database file is created automatically
 - No additional setup required
+- Optimized for analytical workloads
+
+#### SQLite (Legacy)
+- Available for compatibility with existing setups
+- Database file is created automatically
+- Simple file-based database
 
 #### MariaDB (Production)
 - Requires MariaDB server installation
@@ -147,8 +152,8 @@ The Synapse project follows a modular architecture:
 
 #### Adding Database Operations
 1. Add method to base class (`base.py`)
-2. Implement in both SQLite (`sqlite_db.py`) and MariaDB (`mariadb.py`)
-3. Test both implementations
+2. Implement in DuckDB (`duckdb_db.py`), SQLite (`sqlite_db.py`) and MariaDB (`mariadb.py`)
+3. Test all implementations
 4. Update utilities as needed
 
 ## Deployment
@@ -182,7 +187,7 @@ docker run -p 8000:8000 -e SYNAPSE_ENV=production synapse
 **Database connection failed**
 - Check database configuration in config files
 - Verify database server is running (MariaDB)
-- Check file permissions (SQLite)
+- Check file permissions (DuckDB/SQLite)
 
 **Import errors**
 - Verify virtual environment is activated

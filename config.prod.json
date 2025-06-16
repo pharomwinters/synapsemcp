@@ -1,13 +1,11 @@
 {
     "database": {
-        "type": "mariadb",
-        "mariadb": {
-            "host": "db.example.com",
-            "port": 3306,
-            "user": "synapse_user",
-            "database": "synapse_prod"
+        "type": "duckdb",
+        "duckdb": {
+            "db_path": "synapse.duckdb"
         }
     },
-    "memory_dir": "memories_prod",
+    "memory_dir": "memories",
+    "documents_dir": "documents",
     "log_level": "WARNING"
 }

@@ -1,0 +1,25 @@
+{
+    "database": {
+        "type": "mariadb",
+        "mariadb": {
+            "host": "127.0.0.1",
+            "port": 3307,
+            "user": "synapse_user",
+            "password": "synapse_pass_2024",
+            "database": "synapse"
+        }
+    },
+    "memory_dir": "memories_dev",
+    "log_level": "DEBUG",
+    "encoding": "utf-8",
+    "embedded_mariadb": {
+        "enabled": true,
+        "auto_start": true,
+        "data_directory": "synapse_mariadb_data",
+        "port": 3307,
+        "root_password": "synapse_root_2024",
+        "database_name": "synapse",
+        "user_name": "synapse_user",
+        "user_password": "synapse_pass_2024"
+    }
+}
