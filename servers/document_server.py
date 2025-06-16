@@ -67,7 +67,7 @@ except ImportError:
 
 # Local imports
 from config import get_config
-from utils import get_database
+from utils import get_db_instance
 
 # Create Document Server instance
 document_server = FastMCP("Document Synapse")
@@ -290,7 +290,7 @@ def store_document(file_path: str, document_name: Optional[str] = None, tags: Op
         }
         
         # Store in database
-        db = get_database()
+        db = get_db_instance()
         if hasattr(db, 'store_document'):
             db.store_document(document_name, document_metadata)
         else:
@@ -311,9 +311,8 @@ def store_document(file_path: str, document_name: Optional[str] = None, tags: Op
     except Exception as e:
         return {"success": False, "error": f"Failed to store document: {str(e)}"}
 
-@document_server.tool()
-def get_document(document_name: str) -> Dict[str, Any]:
-    """Retrieve document metadata and content.
+def _get_document_internal(document_name: str) -> Dict[str, Any]:
+    """Internal helper to retrieve document metadata and content.
     
     Args:
         document_name: Name of the document to retrieve
@@ -322,7 +321,7 @@ def get_document(document_name: str) -> Dict[str, Any]:
         Dictionary with document metadata and content
     """
     try:
-        db = get_database()
+        db = get_db_instance()
         
         if hasattr(db, 'get_document'):
             document_data = db.get_document(document_name)
@@ -352,6 +351,18 @@ def get_document(document_name: str) -> Dict[str, Any]:
         return {"success": False, "error": f"Failed to retrieve document: {str(e)}"}
 
 @document_server.tool()
+def get_document(document_name: str) -> Dict[str, Any]:
+    """Retrieve document metadata and content.
+    
+    Args:
+        document_name: Name of the document to retrieve
+        
+    Returns:
+        Dictionary with document metadata and content
+    """
+    return _get_document_internal(document_name)
+
+@document_server.tool()
 def list_documents(tag_filter: Optional[str] = None) -> Dict[str, Any]:
     """List all stored documents.
     
@@ -362,7 +373,7 @@ def list_documents(tag_filter: Optional[str] = None) -> Dict[str, Any]:
         Dictionary with list of documents and their basic metadata
     """
     try:
-        db = get_database()
+        db = get_db_instance()
         documents = []
         
         if hasattr(db, 'list_documents'):
@@ -377,7 +388,7 @@ def list_documents(tag_filter: Optional[str] = None) -> Dict[str, Any]:
                     document_list.append(doc_name)
         
         for doc_name in document_list:
-            doc_result = get_document(doc_name)
+            doc_result = _get_document_internal(doc_name)
             if doc_result["success"]:
                 doc_data = doc_result["document"]
                 
@@ -418,7 +429,7 @@ def search_documents(query: str, search_content: bool = True) -> Dict[str, Any]:
         Dictionary with matching documents
     """
     try:
-        db = get_database()
+        db = get_db_instance()
         matching_documents = []
         
         # Get all documents
@@ -430,7 +441,7 @@ def search_documents(query: str, search_content: bool = True) -> Dict[str, Any]:
         
         for doc_summary in docs_result["documents"]:
             doc_name = doc_summary["document_name"]
-            doc_result = get_document(doc_name)
+            doc_result = _get_document_internal(doc_name)
             
             if not doc_result["success"]:
                 continue
@@ -500,7 +511,7 @@ def delete_document(document_name: str, delete_file: bool = False) -> Dict[str, 
     """
     try:
         # Get document info first
-        doc_result = get_document(document_name)
+        doc_result = _get_document_internal(document_name)
         if not doc_result["success"]:
             return doc_result
         
@@ -508,7 +519,7 @@ def delete_document(document_name: str, delete_file: bool = False) -> Dict[str, 
         stored_path = doc_data.get("stored_path")
         
         # Delete from database
-        db = get_database()
+        db = get_db_instance()
         if hasattr(db, 'delete_document'):
             db.delete_document(document_name)
         else:
@@ -574,7 +585,7 @@ def add_document_tags(document_name: str, tags: List[str]) -> Dict[str, Any]:
     """
     try:
         # Get current document
-        doc_result = get_document(document_name)
+        doc_result = _get_document_internal(document_name)
         if not doc_result["success"]:
             return doc_result
         
@@ -588,7 +599,7 @@ def add_document_tags(document_name: str, tags: List[str]) -> Dict[str, Any]:
         doc_data["modified_at"] = datetime.now().isoformat()
         
         # Update in database
-        db = get_database()
+        db = get_db_instance()
         if hasattr(db, 'store_document'):
             db.store_document(document_name, doc_data)
         else:
