@@ -1,0 +1,10 @@
+{
+    "database": {
+        "type": "sqlite",
+        "sqlite": {
+            "db_path": "synapse_test.db"
+        }
+    },
+    "memory_dir": "memories_test",
+    "log_level": "ERROR"
+}

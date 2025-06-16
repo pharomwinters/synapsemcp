@@ -1,0 +1,96 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# Editors and IDEs
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Synapse specific
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+local_config.json
+config.local.json
+*.memory
+memory_data/
+
+# Database files
+*.sql
+*.dump
+*.bak
+
+# Environment configuration
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# Cursor specific
+.cursor/
+.vscode/
+
+# Cache files
+.mypy_cache/
+.ruff_cache/
+__pycache__/
+
+# Jupyter Notebooks
+.ipynb_checkpoints
+
+# Documentation builds
+docs/_build/
+site/
+
+# Dependency lock files (keep these in version control)
+# !requirements.txt
+# !pyproject.toml
+# !uv.lock
+
+# Temporary files
+tmp/
+temp/
+*.tmp 

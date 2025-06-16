@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "synapse"
+version = "2.0.0"
+description = "AI-Human collaboration platform with server composition architecture"
+readme = "README.md"
+requires-python = ">=3.12"
+license = {text = "GPL-3.0-or-later"}
+authors = [
+    {name = "Synapse Team", email = "team@synapse-platform.org"},
+]
+keywords = ["ai", "mcp", "collaboration", "synapse", "neural", "intelligence"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Topic :: Communications",
+]
+dependencies = [
+    "fastmcp>=0.1.0",
+    "mariadb>=1.1.0",
+    "psutil>=5.9.0",
+]
+
+[project.urls]
+Homepage = "https://synapse-platform.org"
+Documentation = "https://docs.synapse-platform.org"
+Repository = "https://github.com/synapse-platform/synapse"
+"Bug Tracker" = "https://github.com/synapse-platform/synapse/issues"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "black>=23.0.0",
+    "flake8>=6.0.0",
+    "mypy>=1.0.0",
+]
+
+[project.scripts]
+synapse = "main:main"
+
+[tool.hatch.version]
+path = "main.py"
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+
+[tool.pytest.ini_options]
+minversion = "7.0"
+addopts = "-ra -q"
+testpaths = [
+    "tests",
+]
+
+[tool.mypy]
+python_version = "3.12"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true

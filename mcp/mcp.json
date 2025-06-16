@@ -1,0 +1,194 @@
+{
+  "mcpServers": {
+    "synapse": {
+      "command": "python",
+      "args": ["-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"],
+      "cwd": "/path/to/synapse",
+      "env": {
+        "SYNAPSE_ENV": "production",
+        "SYNAPSE_AUTO_DISCOVER": "true"
+      }
+    },
+    "synapse-dev": {
+      "command": "python",
+      "args": ["main.py"],
+      "cwd": "/path/to/synapse",
+      "env": {
+        "SYNAPSE_ENV": "development",
+        "SYNAPSE_AUTO_DISCOVER": "true",
+        "PYTHONPATH": "."
+      }
+    },
+    "synapse-stdio": {
+      "command": "python",
+      "args": ["-c", "from mcp_instance import mcp; mcp.run()"],
+      "cwd": "/path/to/synapse",
+      "env": {
+        "SYNAPSE_ENV": "development",
+        "SYNAPSE_AUTO_DISCOVER": "false",
+        "PYTHONPATH": "."
+      }
+    }
+  },
+  "tools": {
+    "memory_get_memory_list": {
+      "description": "Get a list of all memory files in Synapse",
+      "server": "synapse"
+    },
+    "memory_read_memory": {
+      "description": "Read memory content from database or file system",
+      "server": "synapse",
+      "parameters": {
+        "file_name": {
+          "type": "string",
+          "description": "Name of the memory file to read"
+        }
+      }
+    },
+    "memory_write_memory": {
+      "description": "Write memory content to database and file system",
+      "server": "synapse",
+      "parameters": {
+        "file_name": {
+          "type": "string",
+          "description": "Name of the memory file to write"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content to write to the memory file"
+        }
+      }
+    },
+    "templates_generate_synapse_template": {
+      "description": "Generate a template for a specific Synapse file",
+      "server": "synapse",
+      "parameters": {
+        "file_name": {
+          "type": "string",
+          "description": "Name of the file to generate template for (e.g., 'projectbrief.md')"
+        }
+      }
+    },
+    "templates_list_available_templates": {
+      "description": "List all available Synapse templates with descriptions",
+      "server": "synapse"
+    },
+    "templates_analyze_project_summary": {
+      "description": "Analyze project summary and provide Synapse suggestions",
+      "server": "synapse",
+      "parameters": {
+        "project_summary": {
+          "type": "string",
+          "description": "Summary of the project to analyze"
+        }
+      }
+    },
+    "config_get_configuration": {
+      "description": "Get Synapse configuration settings",
+      "server": "synapse",
+      "parameters": {
+        "key": {
+          "type": "string",
+          "description": "Configuration key to retrieve (optional)",
+          "required": false
+        }
+      }
+    },
+    "config_get_environment_info": {
+      "description": "Get information about current environment and system",
+      "server": "synapse"
+    },
+    "config_validate_configuration": {
+      "description": "Validate the current Synapse configuration",
+      "server": "synapse"
+    },
+    "config_get_database_status": {
+      "description": "Get the status of the database connection",
+      "server": "synapse"
+    },
+    "guides_get_synapse_structure": {
+      "description": "Get detailed description of Synapse file structure",
+      "server": "synapse"
+    },
+    "guides_get_guide": {
+      "description": "Get a specific Synapse guide",
+      "server": "synapse",
+      "parameters": {
+        "guide_name": {
+          "type": "string",
+          "description": "Name of the guide (setup, usage, benefits, structure)"
+        }
+      }
+    },
+    "guides_list_available_guides": {
+      "description": "List all available Synapse guides",
+      "server": "synapse"
+    },
+    "guides_search_guides": {
+      "description": "Search through guides for content matching query",
+      "server": "synapse",
+      "parameters": {
+        "query": {
+          "type": "string",
+          "description": "Search term to look for in guide content"
+        }
+      }
+    },
+    "get_server_info": {
+      "description": "Get information about Synapse server composition",
+      "server": "synapse"
+    },
+    "discover_tools": {
+      "description": "Manually trigger auto-discovery of additional tools",
+      "server": "synapse",
+      "parameters": {
+        "verbose": {
+          "type": "boolean",
+          "description": "Print detailed discovery information",
+          "required": false,
+          "default": false
+        }
+      }
+    }
+  },
+  "resources": {
+    "synapse_guide": {
+      "description": "Dynamic access to Synapse guides and documentation",
+      "server": "synapse",
+      "uri_template": "synapse_guide://{section}",
+      "parameters": {
+        "section": {
+          "type": "string",
+          "description": "Guide section to retrieve (setup, usage, benefits, structure)"
+        }
+      }
+    }
+  },
+  "metadata": {
+    "name": "Synapse MCP Platform",
+    "version": "2.0.0",
+    "description": "AI-Human collaboration platform with server composition architecture",
+    "author": "Synapse Team",
+    "architecture": "Server Composition",
+    "features": [
+      "Modular synapse architecture",
+      "Auto-discovery of tools",
+      "Template generation",
+      "Configuration management",
+      "Documentation system",
+      "Database integration",
+      "Plugin support"
+    ],
+    "servers": {
+      "memory": "Core memory operations (CRUD)",
+      "templates": "Template generation and project analysis",
+      "config": "Configuration and system management", 
+      "guides": "Documentation and help resources"
+    },
+    "auto_discovery": {
+      "enabled": true,
+      "patterns": ["tools/*.py", "plugins/*_plugin.py"],
+      "startup_discovery": "configurable via SYNAPSE_AUTO_DISCOVER"
+    }
+  }
+} 

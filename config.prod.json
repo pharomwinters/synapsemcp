@@ -1,0 +1,13 @@
+{
+    "database": {
+        "type": "mariadb",
+        "mariadb": {
+            "host": "db.example.com",
+            "port": 3306,
+            "user": "synapse_user",
+            "database": "synapse_prod"
+        }
+    },
+    "memory_dir": "memories_prod",
+    "log_level": "WARNING"
+}
