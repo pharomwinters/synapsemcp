@@ -401,6 +401,7 @@ def list_available_tools() -> str:
         "config_get_database_info",
         "list_available_tools",
         "get_synapse_info",
+        "get_server_stats",
         "analyze_project_structure",
         "analyze_synapse_health",
         "compare_synapse_templates", 
@@ -513,6 +514,37 @@ def get_synapse_info() -> str:
 **Tools**: All tools are explicitly defined for maximum reliability
 **Usage**: Use the list_available_tools command to see all available operations.
 """
+
+@mcp.tool()
+def get_server_stats() -> str:
+    """Get server statistics and usage metrics."""
+    try:
+        from utils import get_server_stats
+        stats = get_server_stats().get_stats()
+        
+        result = "📊 **Server Statistics**\n\n"
+        result += f"🕐 **Uptime:** {stats['uptime_formatted']}\n"
+        result += f"📈 **Total Requests:** {stats['total_requests']}\n"
+        result += f"❌ **Errors:** {stats['error_count']}\n"
+        result += f"✅ **Success Rate:** {stats['success_rate']:.1f}%\n"
+        result += f"⚡ **Recent Activity:** {stats['recent_activity_count']} calls in last hour\n\n"
+        
+        result += "🏆 **Most Used Tools:**\n"
+        for tool, count in stats['most_used_tools'][:5]:
+            result += f"• {tool}: {count} calls\n"
+        
+        if stats['recent_calls']:
+            result += "\n🕒 **Recent Activity:**\n"
+            for call in stats['recent_calls'][-5:]:
+                status = "✅" if call['success'] else "❌"
+                from datetime import datetime
+                time_str = datetime.fromtimestamp(call['timestamp']).strftime('%H:%M:%S')
+                result += f"• {status} {call['tool']} at {time_str}\n"
+        
+        return result
+        
+    except Exception as e:
+        return f"❌ Error getting server stats: {str(e)}"
 
 # Hard-coded advanced tools registration
 try:

@@ -32,6 +32,9 @@ from datetime import datetime
 import hashlib
 import json
 import logging
+import threading
+import time
+from collections import defaultdict, deque
 
 # Configure logging
 logger = logging.getLogger(__name__)
@@ -491,3 +494,90 @@ def list_all_memories(memory_dir: Optional[Union[str, Path]] = None, db: Optiona
 
     memories.update(fs.list_files())
     return sorted(list(memories))
+
+
+# Server statistics tracking
+class ServerStats:
+    """Track server statistics and usage metrics."""
+    
+    def __init__(self):
+        self.start_time = time.time()
+        self.tool_calls = defaultdict(int)
+        self.tool_call_history = deque(maxlen=1000)  # Keep last 1000 calls
+        self.database_operations = defaultdict(int)
+        self.memory_operations = defaultdict(int)
+        self.error_count = 0
+        self.total_requests = 0
+        self.lock = threading.Lock()
+    
+    def record_tool_call(self, tool_name: str, success: bool = True):
+        """Record a tool call."""
+        with self.lock:
+            self.tool_calls[tool_name] += 1
+            self.total_requests += 1
+            self.tool_call_history.append({
+                'tool': tool_name,
+                'timestamp': time.time(),
+                'success': success
+            })
+            if not success:
+                self.error_count += 1
+    
+    def record_database_op(self, operation: str):
+        """Record a database operation."""
+        with self.lock:
+            self.database_operations[operation] += 1
+    
+    def record_memory_op(self, operation: str):
+        """Record a memory operation."""
+        with self.lock:
+            self.memory_operations[operation] += 1
+    
+    def get_stats(self) -> Dict[str, Any]:
+        """Get current statistics."""
+        with self.lock:
+            uptime = time.time() - self.start_time
+            
+            # Get recent activity (last hour)
+            hour_ago = time.time() - 3600
+            recent_calls = [call for call in self.tool_call_history if call['timestamp'] > hour_ago]
+            
+            # Most used tools
+            most_used = sorted(self.tool_calls.items(), key=lambda x: x[1], reverse=True)[:10]
+            
+            return {
+                'uptime_seconds': uptime,
+                'uptime_formatted': self._format_uptime(uptime),
+                'total_requests': self.total_requests,
+                'error_count': self.error_count,
+                'success_rate': (self.total_requests - self.error_count) / max(self.total_requests, 1) * 100,
+                'tool_calls': dict(self.tool_calls),
+                'most_used_tools': most_used,
+                'database_operations': dict(self.database_operations),
+                'memory_operations': dict(self.memory_operations),
+                'recent_activity_count': len(recent_calls),
+                'recent_calls': recent_calls[-10:],  # Last 10 calls
+            }
+    
+    def _format_uptime(self, seconds: float) -> str:
+        """Format uptime in human readable format."""
+        days = int(seconds // 86400)
+        hours = int((seconds % 86400) // 3600)
+        minutes = int((seconds % 3600) // 60)
+        seconds = int(seconds % 60)
+        
+        if days > 0:
+            return f"{days}d {hours}h {minutes}m {seconds}s"
+        elif hours > 0:
+            return f"{hours}h {minutes}m {seconds}s"
+        elif minutes > 0:
+            return f"{minutes}m {seconds}s"
+        else:
+            return f"{seconds}s"
+
+# Global stats instance
+_server_stats = ServerStats()
+
+def get_server_stats() -> ServerStats:
+    """Get the global server stats instance."""
+    return _server_stats

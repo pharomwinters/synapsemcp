@@ -100,3 +100,6 @@ temp/
 *.tmp 
 synapse.db-shm
 synapse.db-wal
+
+# GUI development
+synapse_gui/
