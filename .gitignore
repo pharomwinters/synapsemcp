@@ -103,3 +103,6 @@ synapse.db-wal
 
 # GUI development
 synapse_gui/
+
+# Axon - Private development (not for public release)
+docs/Axon/

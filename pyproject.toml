@@ -45,10 +45,10 @@ dev = [
 ]
 
 [project.scripts]
-synapse = "main:main"
+synapse = "synapse.cli.main:main"
 
 [tool.hatch.version]
-path = "main.py"
+path = "src/synapse/__version__.py"
 
 [tool.black]
 line-length = 88
